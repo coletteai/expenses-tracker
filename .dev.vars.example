@@ -1,0 +1,3 @@
+# Copy to .dev.vars for local development. Never commit .dev.vars.
+# The email the Worker treats as signed in when Cloudflare Access is not in front of it.
+DEV_EMAIL=you@example.com

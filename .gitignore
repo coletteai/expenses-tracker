@@ -1,3 +1,6 @@
 data-export.json
 *.bak-*
 .DS_Store
+node_modules/
+.wrangler/
+.dev.vars

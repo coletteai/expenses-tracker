@@ -1253,7 +1253,49 @@ function deleteOther(id) {
 // ═══════════════════════════════
 function openSettings() {
   document.getElementById('sheetsUrl').value = (data.settings||{}).sheetsUrl||'';
+  document.getElementById('cloudSavedAt').textContent = 'Last saved to cloud: ' + fmtCloudTime(CloudStore.meta().savedAt);
+  document.getElementById('versionsList').innerHTML = '';
   document.getElementById('settingsOverlay').classList.add('open');
+}
+
+function fmtCloudTime(iso) {
+  if (!iso) return 'never';
+  const d = new Date(iso);
+  return isNaN(d) ? 'never' : d.toLocaleString();
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
+
+async function showVersions() {
+  const list = document.getElementById('versionsList');
+  list.innerHTML = '<p>Loading...</p>';
+  let snaps;
+  try {
+    snaps = await CloudStore.listSnapshots();
+  } catch (e) {
+    list.innerHTML = '<p>Could not load versions. Check your connection.</p>';
+    return;
+  }
+  if (!snaps.length) { list.innerHTML = '<p>No previous versions yet.</p>'; return; }
+  list.innerHTML = snaps.map(s =>
+    `<div class="version-row">
+      <div><strong>Version ${s.version}</strong> · ${escapeHtml(fmtCloudTime(s.createdAt))}<span>${escapeHtml(s.updatedBy)}</span></div>
+      <button onclick="restoreVersion(${s.id}, ${s.version})">Restore</button>
+    </div>`).join('');
+}
+
+async function restoreVersion(id, version) {
+  if (!confirm('Restore version ' + version + '? Your current data is kept as a new version, so this can be undone.')) return;
+  try {
+    await CloudStore.restoreSnapshot(id);
+  } catch (e) {
+    showToast('Restore failed. Check your connection.');
+    return;
+  }
+  closeSettings();
+  showToast('Restored version ' + version + '.');
 }
 function closeSettings() { document.getElementById('settingsOverlay').classList.remove('open'); }
 function saveSettings() {

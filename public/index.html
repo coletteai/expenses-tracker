@@ -21,6 +21,10 @@
     <button class="header-gear" onclick="openSettings()">⚙️</button>
   </div>
 </div>
+<div class="cloud-banner" id="cloudBanner">
+  <span id="cloudBannerText"></span>
+  <button id="cloudBannerReload" onclick="location.reload()">Reload</button>
+</div>
 
 <div class="tab-bar-wrap">
   <div class="tab-bar" id="tabBar"></div>
@@ -150,6 +154,7 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="storage.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

@@ -207,24 +207,52 @@ function getBillFields(bill) {
 //  PERSISTENCE
 // ═══════════════════════════════
 function loadData() {
-  const raw = localStorage.getItem('household-expenses-v1');
-  if (raw) {
-    data = JSON.parse(raw);
-  } else {
+  data = CloudStore.loadCached();
+  if (!data) {
     data = { payments:{}, otherExpenses:[], billOverrides:{}, customBills:{}, customTabs:[], settings:{} };
     Object.entries(SEED_PAYMENTS).forEach(([id, list]) => {
       data.payments[id] = list.map((p,i) => ({...p, id: id+'_'+i}));
     });
     data.otherExpenses = SEED_OTHER.map((e,i) => ({...e, id:'o'+i}));
-    saveData();
+    // Not saved here on purpose: CloudStore.start() uploads it only if the cloud is empty.
   }
 }
-function saveData() { localStorage.setItem('household-expenses-v1', JSON.stringify(data)); }
+function saveData() { CloudStore.save(data); }
+
+// The cloud copy replaced the local one (newer copy on another device, a conflict, or a restore).
+function replaceData(fresh, reason) {
+  data = fresh;
+  renderTabs(); renderContent();
+  if (reason === 'conflict') showToast('Another device changed the data. Your last change was not saved. Please redo it.');
+  else if (reason === 'refresh') showToast('Updated from your other device');
+}
+
+const CLOUD_BANNER_TEXT = {
+  unsaved: 'Not saved to cloud yet. Will retry.',
+  offline: "Can't reach the cloud. Showing your last saved copy.",
+  disconnected: 'Signed out. Reload to sign in again.',
+};
+function updateCloudBanner(status) {
+  const banner = document.getElementById('cloudBanner');
+  banner.className = 'cloud-banner' + (status === 'saved' ? '' : ' ' + status);
+  document.getElementById('cloudBannerText').textContent = CLOUD_BANNER_TEXT[status] || '';
+  document.getElementById('cloudBannerReload').style.display = status === 'disconnected' ? '' : 'none';
+}
 
 // ═══════════════════════════════
 //  RENDER
 // ═══════════════════════════════
-function init() { loadData(); renderTabs(); renderContent(); }
+async function init() {
+  loadData(); renderTabs(); renderContent();
+  CloudStore.onReplace(replaceData);
+  CloudStore.onStatus(updateCloudBanner);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') CloudStore.refresh(); else CloudStore.flush();
+  });
+  window.addEventListener('online', () => CloudStore.refresh());
+  window.addEventListener('pagehide', () => CloudStore.flush());
+  await CloudStore.start(data);
+}
 
 function renderTabs() {
   const tabs = allTabs();

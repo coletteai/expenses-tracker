@@ -90,7 +90,7 @@
 
   function putNow(keepalive) {
     var data = readCache();
-    if (data === null) return Promise.resolve();
+    if (data === null || !meta.dirty) return Promise.resolve();   // nothing pending: never send a duplicate
     var seq = saveSeq;
     inFlight = true;
     return request('PUT', '/api/doc', { baseVersion: meta.version, data: data }, keepalive ? { keepalive: true } : undefined)
@@ -201,6 +201,7 @@
     refresh: function () {
       if (meta.dirty) return runSave(false);
       return fetchRemote().then(function (remote) {
+        if (meta.dirty) return runSave(false);      // an edit landed during the fetch: save it, never adopt over it
         if (remote && (meta.version === null || remote.version > meta.version)) {
           adoptRemote(remote);
           setStatus('saved');

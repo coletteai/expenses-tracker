@@ -222,6 +222,7 @@ function saveData() { CloudStore.save(data); }
 // The cloud copy replaced the local one (newer copy on another device, a conflict, or a restore).
 function replaceData(fresh, reason) {
   data = fresh;
+  if (!allTabs().some(t => t.id === activeTab)) activeTab = allTabs()[0].id;
   renderTabs(); renderContent();
   if (reason === 'conflict') showToast('Another device changed the data. Your last change was not saved. Please redo it.');
   else if (reason === 'refresh') showToast('Updated from your other device');
@@ -250,6 +251,7 @@ async function init() {
     if (document.visibilityState === 'visible') CloudStore.refresh(); else CloudStore.flush();
   });
   window.addEventListener('online', () => CloudStore.refresh());
+  window.addEventListener('focus', () => CloudStore.refresh());
   window.addEventListener('pagehide', () => CloudStore.flush());
   await CloudStore.start(data);
 }

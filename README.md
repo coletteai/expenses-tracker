@@ -4,7 +4,7 @@ A small web app for tracking household bills and expenses. The page is plain HTM
 
 ## Who edits what
 
-- `public/` is the app. Edit `index.html`, `styles.css`, and `app.js` freely. `storage.js` is the bridge to the cloud and rarely needs changes.
+- `public/` is the app. Edit `index.html`, `styles.css`, `app.js`, `manifest.json`, and the icons in `icons/` freely. `storage.js` is the bridge to the cloud and rarely needs changes.
 - Everything else (the Worker in `src/`, `migrations/`, `wrangler.jsonc`, tests) is the operator's.
 
 Pushing to the `main` branch deploys automatically once Workers Builds is connected (see Setup, step 6).
@@ -25,6 +25,8 @@ Pushing to the `main` branch deploys automatically once Workers Builds is connec
 5. Set who may sign in: in the Zero Trust dashboard open Access, Applications, and edit the application Cloudflare created for the Worker. Its policy should Allow only the specific emails of the people who use the app. Under login methods keep only One-time PIN. Set the session duration to the longest available so people are not asked for a code often.
 6. Optional, automatic deploys: in the Worker's Settings open Builds and connect this GitHub repository. Build command `npm ci`, deploy command `npm run deploy`, branch `main`. If the build cannot apply migrations because of permissions, run `npm run migrate` from your machine after schema changes and set the deploy command to `npx wrangler deploy`.
 7. Open the URL on each device, enter the email, enter the emailed code. Add it to the home screen on the phone.
+
+When a sign-in session lapses, the app shows "Signed out. Reload to sign in again." and the next reload asks for a new emailed code. Nothing is lost: changes made while signed out stay on the device and upload after the next sign-in.
 
 Until Access is enabled, the API refuses every request with 401, so the app shows "Signed out" and saves nothing. That is intended.
 
@@ -52,6 +54,6 @@ npm run test:storage   # storage adapter under jsdom
 
 ## Backups and handover
 
-- Manual export of the whole database: `npx wrangler d1 export household-expenses --remote --output backup.sql`.
-- To hand the app to another operator: they clone this repository and follow Setup in their own Cloudflare account, then move the data with Export and Import in Settings or by importing `backup.sql` with `npx wrangler d1 execute household-expenses --remote --file backup.sql`.
+- Manual export of the whole database: `npx wrangler d1 export household-expenses --remote --no-schema --table document --table snapshot --output backup.sql`.
+- To hand the app to another operator: they clone this repository and follow Setup in their own Cloudflare account, then move the data with Export and Import in Settings or, on a freshly deployed and still empty database, by importing `backup.sql` with `npx wrangler d1 execute household-expenses --remote --file backup.sql`.
 - To add or remove a person: edit the emails in the Access policy. No code change.

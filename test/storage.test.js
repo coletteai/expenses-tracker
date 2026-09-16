@@ -318,6 +318,38 @@ describe('flush and refresh', () => {
     await vi.advanceTimersByTimeAsync(2000);
     expect(putCalls()).toHaveLength(2);
   });
+
+  it('refresh saves instead of adopting when an edit lands during its fetch', async () => {
+    setCache({ a: 1 }, { version: 1, dirty: false, savedAt: 't1' });
+    await load();
+    let resolveGet;
+    fetchMock.mockImplementationOnce(() => new Promise((r) => { resolveGet = r; }));
+    fetchMock.mockResolvedValueOnce(ok({ error: 'conflict', version: 2, data: { a: 9 }, updatedAt: 't2', updatedBy: 'mom@x' }, 409));
+    const replaced = vi.fn();
+    CloudStore.onReplace(replaced);
+    const p = CloudStore.refresh();
+    CloudStore.save({ a: 5 });
+    resolveGet(ok({ version: 2, data: { a: 9 }, updatedAt: 't2', updatedBy: 'mom@x' }));
+    await p;
+    expect(putCalls()).toHaveLength(1);
+    expect(putBody(putCalls()[0])).toEqual({ baseVersion: 1, data: { a: 5 } });
+    expect(replaced).toHaveBeenCalledWith({ a: 9 }, 'conflict');
+    expect(replaced).not.toHaveBeenCalledWith({ a: 9 }, 'refresh');
+    expect(meta()).toEqual({ version: 2, dirty: false, savedAt: 't2' });
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(putCalls()).toHaveLength(1);
+  });
+
+  it('refresh on a dirty cache does not send the document twice', async () => {
+    await load();
+    fetchMock.mockResolvedValue(ok({ version: 1, updatedAt: 't1' }));
+    CloudStore.save({ a: 1 });
+    await CloudStore.refresh();
+    expect(putCalls()).toHaveLength(1);
+    expect(meta()).toEqual({ version: 1, dirty: false, savedAt: 't1' });
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(putCalls()).toHaveLength(1);
+  });
 });
 
 describe('snapshots', () => {

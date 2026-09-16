@@ -219,6 +219,25 @@ describe('conflicts and failures', () => {
     await CloudStore.refresh();
     expect(CloudStore.status()).toBe('disconnected');
   });
+
+  it('a 409 cancels the debounce timer of an edit made during the conflicting PUT', async () => {
+    setCache({ a: 1 }, { version: 1, dirty: false, savedAt: 't1' });
+    await load();
+    let resolveFirst;
+    fetchMock.mockImplementationOnce(() => new Promise((r) => { resolveFirst = r; }));
+    CloudStore.save({ a: 2 });
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(putCalls()).toHaveLength(1);
+
+    CloudStore.save({ a: 3 });
+    resolveFirst(ok({ error: 'conflict', version: 5, data: { a: 5 }, updatedAt: 't5', updatedBy: 'mom@x' }, 409));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(cache()).toEqual({ a: 5 });
+    expect(meta()).toEqual({ version: 5, dirty: false, savedAt: 't5' });
+
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(putCalls()).toHaveLength(1);
+  });
 });
 
 describe('flush and refresh', () => {
@@ -276,6 +295,28 @@ describe('flush and refresh', () => {
     expect(putCalls()[1][1].keepalive).toBe(true);
     expect(meta()).toEqual({ version: 2, dirty: false, savedAt: 't2' });
     expect(CloudStore.status()).toBe('saved');
+  });
+
+  it('a save landing while flush waits on an in-flight PUT is sent once with keepalive and no third PUT follows', async () => {
+    await load();
+    let resolveFirst;
+    fetchMock.mockImplementationOnce(() => new Promise((r) => { resolveFirst = r; }));
+    fetchMock.mockResolvedValueOnce(ok({ version: 2, updatedAt: 't2' }));
+    CloudStore.save({ a: 1 });
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(putCalls()).toHaveLength(1);
+
+    const p = CloudStore.flush();
+    CloudStore.save({ a: 2 });
+    resolveFirst(ok({ version: 1, updatedAt: 't1' }));
+    await p;
+    expect(putCalls()).toHaveLength(2);
+    expect(putBody(putCalls()[1])).toEqual({ baseVersion: 1, data: { a: 2 } });
+    expect(putCalls()[1][1].keepalive).toBe(true);
+    expect(meta()).toEqual({ version: 2, dirty: false, savedAt: 't2' });
+
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(putCalls()).toHaveLength(2);
   });
 });
 

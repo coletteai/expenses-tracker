@@ -97,7 +97,8 @@
       .then(function (res) {
         if (res.status === 409) {
           return res.json().then(function (remote) {
-            seq = saveSeq;            // an edit made during this PUT is discarded together with the conflict
+            cancelTimer();            // an edit made during this PUT is discarded together with the conflict
+            seq = saveSeq;
             adoptRemote(remote);
             setStatus('saved');
             notifyReplace(remote.data, 'conflict');
@@ -126,6 +127,7 @@
     var changed = saveSeq !== seq;
     if (flushAfter) {
       flushAfter = false;
+      cancelTimer();                 // the follow-up carries the latest cache; a pending debounce must not send it again
       return meta.dirty ? runSave(true) : Promise.resolve();
     }
     if (changed && timer === null) schedule(0);   // a pending debounce timer will send it anyway

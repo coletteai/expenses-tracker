@@ -78,6 +78,27 @@ describe('save', () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(meta()).toEqual({ version: 2, dirty: false, savedAt: 't2' });
   });
+
+  it('keeps dirty when a save arrives during an in-flight PUT that completes before the debounce fires', async () => {
+    await load();
+    let resolveFirst;
+    fetchMock.mockImplementationOnce(() => new Promise((r) => { resolveFirst = r; }));
+    fetchMock.mockResolvedValueOnce(ok({ version: 2, updatedAt: 't2' }));
+    CloudStore.save({ a: 1 });
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(putCalls()).toHaveLength(1);
+
+    CloudStore.save({ a: 2 });
+    resolveFirst(ok({ version: 1, updatedAt: 't1' }));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(meta()).toEqual({ version: 1, dirty: true, savedAt: 't1' });
+    expect(putCalls()).toHaveLength(1);
+
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(putCalls()).toHaveLength(2);
+    expect(putBody(putCalls()[1])).toEqual({ baseVersion: 1, data: { a: 2 } });
+    expect(meta()).toEqual({ version: 2, dirty: false, savedAt: 't2' });
+  });
 });
 
 describe('start', () => {
@@ -231,6 +252,31 @@ describe('flush and refresh', () => {
     expect(replaced).toHaveBeenCalledWith({ a: 2 }, 'refresh');
     expect(meta().version).toBe(2);
   });
+
+  it('flush during an in-flight PUT sends the follow-up with keepalive as soon as the first completes', async () => {
+    await load();
+    let resolveFirst;
+    fetchMock.mockImplementationOnce(() => new Promise((r) => { resolveFirst = r; }));
+    fetchMock.mockResolvedValueOnce(ok({ version: 2, updatedAt: 't2' }));
+    CloudStore.save({ a: 1 });
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(putCalls()).toHaveLength(1);
+
+    CloudStore.save({ a: 2 });
+    let flushed = false;
+    const p = CloudStore.flush().then(() => { flushed = true; });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(putCalls()).toHaveLength(1);
+    expect(flushed).toBe(false);
+
+    resolveFirst(ok({ version: 1, updatedAt: 't1' }));
+    await p;
+    expect(putCalls()).toHaveLength(2);
+    expect(putBody(putCalls()[1])).toEqual({ baseVersion: 1, data: { a: 2 } });
+    expect(putCalls()[1][1].keepalive).toBe(true);
+    expect(meta()).toEqual({ version: 2, dirty: false, savedAt: 't2' });
+    expect(CloudStore.status()).toBe('saved');
+  });
 });
 
 describe('snapshots', () => {
@@ -254,5 +300,21 @@ describe('snapshots', () => {
     expect(replaced).toHaveBeenCalledWith({ a: 1 }, 'restore');
     expect(cache()).toEqual({ a: 1 });
     expect(meta()).toEqual({ version: 3, dirty: false, savedAt: 't3' });
+  });
+
+  it('does not let a slow PUT response roll back the version after a restore', async () => {
+    await load();
+    let resolveFirst;
+    fetchMock.mockImplementationOnce(() => new Promise((r) => { resolveFirst = r; }));
+    fetchMock.mockResolvedValueOnce(ok({ version: 3, data: { a: 0 }, updatedAt: 't3', updatedBy: 'mom@x' }));
+    CloudStore.save({ a: 1 });
+    await vi.advanceTimersByTimeAsync(1000);
+    await CloudStore.restoreSnapshot(9);
+    expect(meta().version).toBe(3);
+
+    resolveFirst(ok({ version: 2, updatedAt: 't2' }));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(meta()).toEqual({ version: 3, dirty: false, savedAt: 't3' });
+    expect(putCalls()).toHaveLength(1);
   });
 });

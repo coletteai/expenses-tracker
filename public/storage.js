@@ -15,7 +15,9 @@
   var meta = readMeta();          // { version, dirty, savedAt }
   var timer = null;               // debounce timer id
   var inFlight = false;           // a PUT is running
-  var queued = false;             // data changed while a PUT was running
+  var inFlightPromise = null;     // settles when the running PUT, and any follow-up it triggers, are done
+  var flushAfter = false;         // flush() arrived while a PUT was running: send the follow-up at once, with keepalive
+  var saveSeq = 0;                // bumped by every save(); tells a PUT whether the cache changed while it was running
   var status = 'saved';           // saved | unsaved | offline | disconnected
   var replaceHandlers = [];
   var statusHandlers = [];
@@ -89,12 +91,13 @@
   function putNow(keepalive) {
     var data = readCache();
     if (data === null) return Promise.resolve();
+    var seq = saveSeq;
     inFlight = true;
     return request('PUT', '/api/doc', { baseVersion: meta.version, data: data }, keepalive ? { keepalive: true } : undefined)
       .then(function (res) {
         if (res.status === 409) {
           return res.json().then(function (remote) {
-            queued = false;
+            seq = saveSeq;            // an edit made during this PUT is discarded together with the conflict
             adoptRemote(remote);
             setStatus('saved');
             notifyReplace(remote.data, 'conflict');
@@ -102,22 +105,31 @@
         }
         if (!res.ok) throw new NetworkError('HTTP ' + res.status);
         return res.json().then(function (body) {
-          meta.version = body.version;
-          meta.savedAt = body.updatedAt;
-          if (!queued) meta.dirty = false;
+          if (meta.version === null || body.version > meta.version) {
+            meta.version = body.version;
+            meta.savedAt = body.updatedAt;
+          }
+          if (saveSeq === seq) meta.dirty = false;   // otherwise newer data is waiting and stays dirty
           writeMeta();
-          if (!queued) setStatus('saved');
+          if (saveSeq === seq) setStatus('saved');
         });
       })
-      .then(function () { finish(); }, function (e) {
+      .then(function () { return finish(seq); }, function (e) {
         setStatus(failureStatus(e));
-        finish();
-        throw e;
+        return finish(seq).then(function () { throw e; });
       });
   }
-  function finish() {
+
+  // Runs after a PUT settles. Returns a promise so that a flush follow-up is awaited by the caller's chain.
+  function finish(seq) {
     inFlight = false;
-    if (queued) { queued = false; schedule(0); }
+    var changed = saveSeq !== seq;
+    if (flushAfter) {
+      flushAfter = false;
+      return meta.dirty ? runSave(true) : Promise.resolve();
+    }
+    if (changed && timer === null) schedule(0);   // a pending debounce timer will send it anyway
+    return Promise.resolve();
   }
 
   function schedule(ms) {
@@ -125,8 +137,9 @@
     timer = setTimeout(function () { timer = null; runSave(false); }, ms);
   }
   function runSave(keepalive) {
-    if (inFlight) { queued = true; return Promise.resolve(); }
-    return putNow(keepalive).then(null, function () { /* status already reported */ });
+    if (inFlight) return inFlightPromise;          // finish() sends a follow-up if the cache changed meanwhile
+    inFlightPromise = putNow(keepalive).then(null, function () { /* status already reported */ });
+    return inFlightPromise;
   }
   function cancelTimer() {
     if (timer !== null) { clearTimeout(timer); timer = null; }
@@ -145,6 +158,7 @@
     // Called after every user action. Writes the cache now, the cloud a second later.
     save: function (data) {
       writeCache(data);
+      saveSeq++;
       meta.dirty = true;
       writeMeta();
       schedule(DEBOUNCE_MS);
@@ -154,6 +168,7 @@
     flush: function () {
       cancelTimer();
       if (!meta.dirty) return Promise.resolve();
+      if (inFlight) { flushAfter = true; return inFlightPromise; }
       return runSave(true);
     },
 
@@ -209,7 +224,6 @@
         return res.json();
       }).then(function (remote) {
         cancelTimer();
-        queued = false;
         adoptRemote(remote);
         setStatus('saved');
         notifyReplace(remote.data, 'restore');

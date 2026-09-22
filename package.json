@@ -1,0 +1,20 @@
+{
+  "name": "household-expenses",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "migrate": "wrangler d1 migrations apply household-expenses --remote",
+    "migrate:local": "wrangler d1 migrations apply household-expenses --local",
+    "deploy": "npm run migrate && wrangler deploy",
+    "test": "npm run test:worker && npm run test:storage",
+    "test:worker": "vitest run --config vitest.config.js",
+    "test:storage": "vitest run --config vitest.storage.config.js"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.22.0",
+    "jsdom": "^30.0.1",
+    "vitest": "^4.1.0",
+    "wrangler": "^4.132.0"
+  }
+}

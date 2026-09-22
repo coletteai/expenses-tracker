@@ -1,381 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Expenses</title>
-<style>
-* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f2f2f7; min-height: 100vh; max-width: 1000px; margin: 0 auto; }
-
-/* ── HEADER ── */
-.header { background: #fff; padding: 18px 24px 14px; border-bottom: 1px solid #e5e5ea; display: flex; align-items: center; justify-content: space-between; }
-.header h1 { font-size: 26px; font-weight: 700; color: #1c1c1e; }
-.header-right { display: flex; align-items: center; gap: 10px; }
-.header-gear { font-size: 22px; padding: 6px; background: none; border: none; cursor: pointer; }
-
-/* ── TAB BAR ── */
-.tab-bar-wrap { display: flex; align-items: center; background: #fff; border-bottom: 2px solid #e5e5ea; }
-.tab-bar { display: flex; overflow-x: auto; flex: 1; min-width: 0; scrollbar-width: none; align-items: center; }
-.tab-bar::-webkit-scrollbar { display: none; }
-.tab-btn { flex-shrink: 0; padding: 13px 20px; font-size: 15px; font-weight: 600; color: var(--c); border: none; background: none; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; white-space: nowrap; opacity: 0.55; }
-.tab-btn.active { border-bottom-color: var(--c); opacity: 1; }
-.add-tab-btn { flex-shrink: 0; padding: 10px 14px; font-size: 20px; color: #8e8e93; border: none; border-left: 1px solid #e5e5ea; background: #fff; cursor: pointer; line-height: 1; }
-
-/* Hover flyout menu for tabs with sub-items (e.g. Family members) */
-.tab-hover-menu { display: none; position: fixed; background: #fff; border: 1px solid #e5e5ea; border-radius: 10px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); min-width: 150px; z-index: 200; overflow: hidden; }
-.tab-dropdown-item { display: block; width: 100%; text-align: left; padding: 10px 14px; font-size: 14px; font-weight: 600; color: #3a3a3c; background: none; border: none; border-bottom: 1px solid #f2f2f7; cursor: pointer; white-space: nowrap; }
-.tab-dropdown-item:last-child { border-bottom: none; }
-.tab-dropdown-item:hover { background: #f2f2f7; }
-.tab-dropdown-item.active { color: #00838F; }
-.clear-filter-btn { background: none; border: none; cursor: pointer; color: #8e8e93; font-size: 12px; margin-left: 4px; padding: 2px 4px; }
-.clear-filter-btn:hover { color: #ff3b30; }
-
-/* ── CONTENT ── */
-.content { padding: 16px 20px 80px; }
-
-/* ── MONTH NAV ── */
-.month-nav { display: flex; align-items: center; justify-content: center; background: #fff; border-radius: 14px; padding: 10px 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.07); }
-.month-nav-label { font-size: 18px; font-weight: 700; color: #1c1c1e; }
-
-/* ── PROGRESS ── */
-.progress-wrap { padding: 0 2px 16px; }
-.progress-bar-bg { background: #e5e5ea; border-radius: 6px; height: 7px; }
-.progress-bar-fill { height: 7px; border-radius: 6px; transition: width 0.4s; }
-.progress-label { font-size: 13px; color: #8e8e93; margin-top: 5px; }
-
-/* ── SECTION LABEL ── */
-.section-label { font-size: 12px; font-weight: 700; color: #8e8e93; text-transform: uppercase; letter-spacing: 0.6px; margin: 20px 2px 10px; }
-.section-label-row { display: flex; align-items: center; justify-content: space-between; margin: 20px 2px 10px; }
-.section-label-row .section-label { margin: 0; }
-.section-label:first-child { margin-top: 0; }
-
-/* ── FREQ BADGE ── */
-.freq-badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 20px; margin-right: 6px; vertical-align: middle; }
-.badge-monthly { background: #e3f2fd; color: #1565C0; }
-.badge-annual  { background: #fce4ec; color: #C2185B; }
-.badge-other   { background: #f3e5f5; color: #7B1FA2; }
-
-/* ── BILL CARD ── */
-.bill-card { background: #fff; border-radius: 16px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); overflow: hidden; }
-
-/* Colored title bar (matches tab/property color) */
-.bill-color-bar { padding: 10px 16px; font-size: 15px; font-weight: 700; color: #fff; }
-
-/* Bill header row */
-.bill-header { display: flex; align-items: flex-start; padding: 14px 16px 0; gap: 10px; }
-.bill-header-left { flex: 1; min-width: 0; }
-.bill-title-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
-.bill-paid-status { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 20px; }
-.bill-paid-status.paid { background: #e9fbe9; color: #1a7f37; }
-.bill-paid-status.unpaid { background: #fff3e0; color: #c45000; }
-.bill-header-actions { display: flex; gap: 6px; flex-shrink: 0; align-items: center; }
-.bill-quick-add-btn { font-size: 17px; font-weight: 700; color: #8e8e93; background: #fff; border: 1.5px solid #d0d0d8; border-radius: 8px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; line-height: 1; }
-.bill-quick-add-btn:hover { border-color: #007aff; color: #007aff; }
-.edit-payments-btn { font-size: 13px; font-weight: 600; padding: 5px 12px; border-radius: 8px; border: 1.5px solid #d0d0d8; background: #fff; color: #3a3a3c; cursor: pointer; }
-.edit-payments-btn.active { border-color: #007aff; color: #007aff; background: #f0f6ff; }
-.edit-payments-btn:hover { border-color: #007aff; color: #007aff; }
-
-/* Bill info row (read-only) */
-.bill-info-row { display: flex; flex-wrap: wrap; gap: 6px 24px; padding: 10px 16px 12px; }
-.bill-info-item { display: flex; gap: 6px; align-items: baseline; }
-.bill-info-label { font-size: 12px; color: #8e8e93; font-weight: 600; white-space: nowrap; }
-.bill-info-value { font-size: 13px; color: #3a3a3c; }
-.bill-info-value.empty { color: #c7c7cc; font-style: italic; }
-.bill-info-input { font-size: 13px; border: 1px solid #d0d0d8; border-radius: 6px; padding: 3px 6px; background: #fff; color: #1c1c1e; min-width: 120px; }
-.bill-fields-editor { display: flex; flex-direction: column; gap: 6px; padding: 10px 16px 12px; }
-.bill-field-row { display: flex; align-items: center; gap: 8px; }
-.bill-field-label { width: 130px; flex-shrink: 0; }
-.bill-field-value { flex: 1; min-width: 0; }
-
-/* ── PAYMENTS TABLE ── */
-.payments-section { border-top: 1px solid #f0f0f5; }
-.payments-header { display: flex; padding: 8px 16px; background: #f9f9fb; }
-.payments-header-cell { font-size: 11px; font-weight: 700; color: #8e8e93; text-transform: uppercase; letter-spacing: 0.4px; }
-.payment-row { display: flex; align-items: center; padding: 10px 16px; border-top: 1px solid #f5f5f7; }
-.payment-row:hover { background: #fafafa; }
-.payment-cell { font-size: 14px; color: #1c1c1e; }
-.payment-cell.muted { color: #8e8e93; font-size: 13px; }
-.payment-cell.amount { font-weight: 700; }
-.payment-edit-btn { background: none; border: none; cursor: pointer; font-size: 14px; color: #c7c7cc; padding: 4px 6px; border-radius: 6px; margin-left: auto; flex-shrink: 0; }
-.payment-edit-btn:hover { color: #007aff; background: #f0f0f5; }
-.payment-delete-btn { background: none; border: none; cursor: pointer; font-size: 13px; color: #c7c7cc; padding: 4px 6px; border-radius: 6px; }
-.payment-delete-btn:hover { color: #ff3b30; }
-.payment-edit-btn-text { background: none; border: none; cursor: pointer; font-size: 12px; font-weight: 700; color: #007aff; padding: 5px 8px; border-radius: 6px; }
-.payment-edit-btn-text:hover { background: #f0f6ff; }
-.payment-delete-btn-text { background: none; border: none; cursor: pointer; font-size: 12px; font-weight: 700; color: #ff3b30; padding: 5px 8px; border-radius: 6px; }
-.payment-delete-btn-text:hover { background: #fff0ef; }
-.payment-save-btn { font-size: 12px; font-weight: 700; color: #fff; background: #007aff; border: none; border-radius: 6px; padding: 6px 12px; cursor: pointer; flex-shrink: 0; }
-.payment-save-btn:hover { background: #0066d6; }
-
-/* Inline "add payment" row */
-.payment-row-editing { background: #e3f0ff; }
-.inline-input { font-size: 13px; border: 1px solid #d0d0d8; border-radius: 6px; padding: 5px 7px; background: #fff; color: #1c1c1e; min-width: 0; }
-
-/* Empty-until-clicked date field (no native mm/dd/yyyy placeholder) */
-.date-field-wrap { display: flex; align-items: center; border: 1px solid #d0d0d8; border-radius: 6px; background: #fff; overflow: hidden; }
-.date-field-input { flex: 1; min-width: 0; font-size: 13px; border: none; padding: 5px 6px; background: transparent; color: #1c1c1e; }
-.date-field-btn { background: none; border: none; cursor: pointer; padding: 3px 6px; margin: 0; color: #8e8e93; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
-.date-field-btn:hover { color: #007aff; }
-
-.bill-setting-input { font-size: 13px; border: 1px solid #d0d0d8; border-radius: 6px; padding: 5px 7px; background: #fff; color: #1c1c1e; }
-.bill-setting-save { font-size: 13px; font-weight: 700; color: #fff; background: #007aff; border: none; border-radius: 8px; padding: 9px 16px; cursor: pointer; }
-.method-rows { display: flex; flex-direction: column; gap: 6px; width: 100%; }
-.method-row { display: flex; align-items: center; gap: 8px; }
-.method-row-num { font-weight: 700; color: #8e8e93; width: 16px; flex-shrink: 0; text-align: right; }
-.method-row-input { flex: 1; min-width: 0; }
-.method-row-remove { background: none; border: none; cursor: pointer; font-size: 13px; color: #c7c7cc; padding: 4px 6px; border-radius: 6px; flex-shrink: 0; }
-.method-row-remove:hover { color: #ff3b30; background: #f0f0f5; }
-.method-row-add { align-self: flex-start; background: none; border: none; color: #007aff; font-size: 13px; font-weight: 600; cursor: pointer; padding: 2px 0; }
-
-/* ── UNIFIED "EDIT BILL" PANEL ── */
-.edit-panel { background: #f7f8fa; border-top: 1px solid #e5e5ea; border-bottom: 1px solid #e5e5ea; padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 10px; }
-.edit-panel-title { font-size: 15px; font-weight: 700; color: #1c1c1e; margin-bottom: 2px; }
-.edit-panel-row { display: flex; align-items: center; gap: 10px; }
-.edit-panel-row label { width: 110px; flex-shrink: 0; font-size: 13px; font-weight: 600; color: #3a3a3c; }
-.edit-panel-input { flex: 1; min-width: 0; font-size: 14px; border: 1px solid #d0d0d8; border-radius: 8px; padding: 8px 10px; background: #fff; color: #1c1c1e; }
-.edit-panel-section-label { font-size: 12px; font-weight: 700; color: #8e8e93; text-transform: uppercase; letter-spacing: 0.4px; margin-top: 6px; }
-.edit-panel-actions { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
-.edit-panel-spacer { flex: 1; }
-.btn-cancel-inline { font-size: 13px; font-weight: 600; color: #3a3a3c; background: #fff; border: 1.5px solid #d0d0d8; border-radius: 8px; padding: 8px 16px; cursor: pointer; }
-.btn-cancel-inline:hover { border-color: #8e8e93; }
-
-/* column widths */
-.col-stmt   { width: 110px; flex-shrink: 0; }
-.col-pay    { width: 110px; flex-shrink: 0; }
-.col-amt    { width: 90px;  flex-shrink: 0; }
-.col-method { flex: 1; min-width: 0; }
-.col-notes  { flex: 1; min-width: 0; }
-.col-actions{ width: 130px; flex-shrink: 0; display: flex; justify-content: flex-end; align-items: center; gap: 2px; }
-
-.no-payments { padding: 14px 16px; font-size: 14px; color: #c7c7cc; font-style: italic; }
-
-/* History toggle */
-.history-toggle { padding: 4px 16px 8px; }
-.history-toggle-btn { font-size: 13px; color: #007aff; background: none; border: none; cursor: pointer; padding: 4px 0; }
-
-/* Bill card footer */
-.bill-footer { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px 14px; }
-.log-pay-btn { padding: 9px 18px; font-size: 14px; font-weight: 700; color: #fff; border: none; border-radius: 10px; cursor: pointer; }
-.log-pay-btn:active { opacity: 0.8; }
-
-/* ── TOP-RIGHT ACTION BUTTONS ── */
-.top-actions { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 16px; }
-.small-action-btn { padding: 7px 14px; border: none; border-radius: 10px; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-.small-action-btn:active { opacity: 0.85; }
-
-/* ── BILL PICKER ── */
-.log-col-checks { display: flex; flex-wrap: wrap; gap: 8px 18px; }
-.log-col-check { display: flex; align-items: center; gap: 7px; font-size: 14px; color: #1c1c1e; cursor: pointer; }
-.log-col-check input[type="checkbox"] { width: 18px; height: 18px; flex-shrink: 0; }
-.bill-picker-item { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid #f2f2f7; cursor: pointer; gap: 10px; }
-.bill-picker-item:last-child { border-bottom: none; }
-.bill-picker-item:hover { background: #f9f9ff; }
-.bill-picker-name { font-size: 15px; font-weight: 600; color: #1c1c1e; flex: 1; }
-.tab-reorder-btns { display: flex; flex-direction: column; gap: 2px; margin-right: 4px; }
-.tab-reorder-btn { background: #f2f2f7; border: none; border-radius: 5px; width: 26px; height: 22px; font-size: 11px; color: #3a3a3c; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-.tab-reorder-btn:hover:not(:disabled) { background: #e5e5ea; }
-.tab-reorder-btn:disabled { opacity: 0.3; cursor: default; }
-.tab-delete-confirm-btn { font-size: 12px; font-weight: 700; border: none; border-radius: 6px; padding: 5px 10px; cursor: pointer; }
-.tab-delete-confirm-btn.confirm { background: #ff3b30; color: #fff; }
-.tab-delete-confirm-btn.cancel { background: #f0f0f5; color: #3a3a3c; margin-left: 4px; }
-.bill-delete-btn-text { font-size: 12px; font-weight: 700; color: #ff3b30; background: none; border: none; cursor: pointer; padding: 5px 8px; border-radius: 6px; }
-.bill-delete-btn-text:hover { background: #fff0ef; }
-.bill-delete-confirm { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #3a3a3c; white-space: nowrap; }
-
-/* ── OTHER EXPENSES (property tabs only) ── */
-.other-expenses-card { background: #fff; border-radius: 16px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); overflow: hidden; }
-.other-row { display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid #f5f5f7; gap: 12px; }
-.other-row:last-child { border-bottom: none; }
-.other-info { flex: 1; min-width: 0; }
-.other-type { font-size: 15px; font-weight: 600; color: #1c1c1e; }
-.other-sub { font-size: 12px; color: #8e8e93; margin-top: 2px; }
-.other-right { text-align: right; flex-shrink: 0; }
-.other-amount { font-size: 15px; font-weight: 700; color: #1c1c1e; }
-.other-date { font-size: 12px; color: #8e8e93; margin-top: 2px; }
-.other-del { font-size: 14px; color: #c7c7cc; background: none; border: none; cursor: pointer; padding: 4px; }
-.other-del:hover { color: #ff3b30; }
-
-/* ── HEADER SYNC ── */
-.header-sync-btn { padding: 7px 14px; background: #34c759; color: #fff; font-size: 13px; font-weight: 700; border: none; border-radius: 10px; cursor: pointer; white-space: nowrap; }
-.header-sync-btn:active { opacity: 0.85; }
-
-/* ── MODAL (centered) ── */
-.overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; align-items: center; justify-content: center; padding: 24px; }
-.overlay.open { display: flex; }
-.sheet { background: #f2f2f7; border-radius: 20px; width: 100%; max-width: 540px; max-height: 88vh; overflow-y: auto; padding-bottom: 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.25); }
-.sheet-handle { display: none; }
-.sheet-title { font-size: 20px; font-weight: 700; color: #1c1c1e; padding: 16px 20px 4px; }
-.sheet-subtitle { font-size: 14px; color: #8e8e93; padding: 0 20px 12px; }
-.form-section { background: #fff; border-radius: 14px; margin: 8px 14px; overflow: hidden; }
-.form-row { display: flex; align-items: center; padding: 14px 16px; border-bottom: 1px solid #f2f2f7; gap: 10px; }
-.form-row:last-child { border-bottom: none; }
-.form-label { font-size: 15px; font-weight: 500; color: #1c1c1e; width: 140px; flex-shrink: 0; }
-.form-input { flex: 1; font-size: 16px; border: none; outline: none; background: none; color: #1c1c1e; text-align: right; min-width: 0; }
-.form-input::placeholder { color: #c7c7cc; }
-.form-select { flex: 1; font-size: 16px; border: none; outline: none; background: none; color: #1c1c1e; text-align: right; min-width: 0; cursor: pointer; }
-.sheet-actions { display: flex; gap: 10px; padding: 14px 14px 0; }
-.btn-cancel { flex: 1; padding: 15px; background: #fff; color: #1c1c1e; font-size: 16px; font-weight: 600; border: none; border-radius: 12px; cursor: pointer; }
-.btn-save { flex: 2; padding: 15px; color: #fff; font-size: 16px; font-weight: 700; border: none; border-radius: 12px; cursor: pointer; }
-.btn-danger { flex: 1; padding: 15px; background: #fff; color: #ff3b30; font-size: 16px; font-weight: 600; border: none; border-radius: 12px; cursor: pointer; }
-
-/* ── SETTINGS ── */
-.settings-overlay { display: none; position: fixed; inset: 0; background: #f2f2f7; z-index: 300; overflow-y: auto; }
-.settings-overlay.open { display: block; }
-.settings-nav { display: flex; align-items: center; padding: 16px 20px; background: #fff; border-bottom: 1px solid #e5e5ea; }
-.settings-back { font-size: 16px; color: #007aff; background: none; border: none; cursor: pointer; margin-right: 12px; font-weight: 500; }
-.settings-section { background: #fff; border-radius: 14px; margin: 14px; overflow: hidden; }
-.settings-row { padding: 14px 16px; border-bottom: 1px solid #f2f2f7; }
-.settings-row:last-child { border-bottom: none; }
-.settings-row label { display: block; font-size: 12px; font-weight: 700; color: #8e8e93; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.4px; }
-.settings-row input { width: 100%; font-size: 15px; border: none; outline: none; background: none; color: #1c1c1e; }
-.settings-row p { font-size: 13px; color: #8e8e93; line-height: 1.6; margin-top: 5px; }
-.settings-save-btn { display: block; width: calc(100% - 28px); margin: 0 14px; padding: 15px; background: #007aff; color: #fff; font-size: 16px; font-weight: 700; border: none; border-radius: 12px; cursor: pointer; }
-
-/* ── TOAST ── */
-.toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: #1c1c1e; color: #fff; padding: 12px 26px; border-radius: 22px; font-size: 15px; font-weight: 500; opacity: 0; transition: opacity 0.25s; z-index: 500; white-space: nowrap; pointer-events: none; }
-.toast.show { opacity: 1; }
-</style>
-</head>
-<body>
-
-<div class="header">
-  <h1>Expenses</h1>
-  <div class="header-right">
-    <button class="header-sync-btn" onclick="syncToSheets()">☁️ Sync</button>
-    <button class="header-gear" onclick="openSettings()">⚙️</button>
-  </div>
-</div>
-
-<div class="tab-bar-wrap">
-  <div class="tab-bar" id="tabBar"></div>
-  <button class="add-tab-btn" onclick="openAddTab()" title="Add or delete tabs">＋</button>
-</div>
-<div id="tabHoverMenu" class="tab-hover-menu"></div>
-<div class="content" id="content"></div>
-
-
-<!-- ADD BILL MODAL -->
-<div class="overlay" id="addBillModal">
-  <div class="sheet">
-    <div class="sheet-handle"></div>
-    <div class="sheet-title">Add New Bill</div>
-    <div class="sheet-subtitle" id="addBillTabLabel"></div>
-    <div class="form-section">
-      <div class="form-row"><div class="form-label">Bill Name</div><input class="form-input" id="nb_name" placeholder="Bill name"></div>
-      <div class="form-row"><div class="form-label">Account #</div><input class="form-input" id="nb_acct" placeholder="Optional"></div>
-      <div class="form-row"><div class="form-label">Name on Account</div><input class="form-input" id="nb_acctName" placeholder="Optional"></div>
-      <div class="form-row"><div class="form-label">Telephone</div><input class="form-input" id="nb_phone" placeholder="Optional" type="tel"></div>
-      <div class="form-row">
-        <div class="form-label">Frequency</div>
-        <select class="form-select" id="nb_freq">
-          <option value="Monthly">Monthly</option>
-          <option value="Annual">Annual</option>
-          <option value="Quarterly">Quarterly (Every 3 Months)</option>
-          <option value="Bimonthly">Every 2 Months</option>
-          <option value="Other">Other</option>
-        </select>
-      </div>
-    </div>
-    <div class="sheet-actions">
-      <button class="btn-cancel" onclick="document.getElementById('addBillModal').classList.remove('open')">Cancel</button>
-      <button class="btn-save" id="addBillSaveBtn" onclick="saveNewBill()">Add Bill</button>
-    </div>
-  </div>
-</div>
-
-<!-- MANAGE TABS MODAL -->
-<div class="overlay" id="addTabModal">
-  <div class="sheet">
-    <div class="sheet-handle"></div>
-    <div class="sheet-title">Manage Tabs</div>
-    <div class="sheet-subtitle">Tap ✕ to delete a tab</div>
-    <div class="form-section" id="tabManageList" style="margin:8px 14px"></div>
-    <div class="sheet-subtitle" style="padding-top:14px;font-weight:700;color:#3a3a3c">Add New Tab</div>
-    <div class="form-section">
-      <div class="form-row"><div class="form-label">Tab Name</div><input class="form-input" id="nt_name" placeholder="e.g. Medical"></div>
-      <div class="form-row">
-        <div class="form-label">Color</div>
-        <input type="color" id="nt_color" value="#007aff" style="flex:1;height:32px;border:none;background:none;cursor:pointer">
-      </div>
-      <div class="form-row">
-        <div class="form-label">Type</div>
-        <select class="form-select" id="nt_kind">
-          <option value="recurring">Recurring</option>
-          <option value="non-recurring">Non-recurring</option>
-        </select>
-      </div>
-    </div>
-    <div class="sheet-actions">
-      <button class="btn-cancel" onclick="document.getElementById('addTabModal').classList.remove('open')">Cancel</button>
-      <button class="btn-save" style="background:#007aff" onclick="saveNewTab()">Add Tab</button>
-    </div>
-  </div>
-</div>
-
-<!-- ADD OTHER EXPENSE / PERSONAL CARE MODAL -->
-<div class="overlay" id="otherModal">
-  <div class="sheet">
-    <div class="sheet-handle"></div>
-    <div class="sheet-title" id="otherModalTitle">Add Expense</div>
-    <div class="sheet-subtitle" id="otherSubtitle"></div>
-    <div class="form-section">
-      <div class="form-row"><div class="form-label">Date</div><input type="date" class="form-input" id="otherDate"></div>
-      <div class="form-row" id="otherTypeRow"><div class="form-label">Type of Service</div><input class="form-input" id="otherType" placeholder="e.g. Color, Lashes, Mani..."></div>
-      <div class="form-row" id="otherProviderRow">
-        <div class="form-label" id="otherProviderLabel">Provider / Name</div>
-        <input class="form-input" id="otherProvider" placeholder="Name">
-        <select class="form-select" id="otherProviderSelect" style="display:none"></select>
-      </div>
-      <div class="form-row"><div class="form-label">Amount ($)</div><input type="number" class="form-input" id="otherAmount" placeholder="0.00" step="0.01" inputmode="decimal"></div>
-      <div class="form-row" id="otherTipRow"><div class="form-label">Tip ($)</div><input type="number" class="form-input" id="otherTip" placeholder="0.00" step="0.01" inputmode="decimal"></div>
-      <div class="form-row" id="otherNotesRow"><div class="form-label">Notes</div><input class="form-input" id="otherNotes" placeholder="Optional"></div>
-    </div>
-    <div class="sheet-actions">
-      <button class="btn-cancel" onclick="closeOtherModal()">Cancel</button>
-      <button class="btn-save" id="otherSaveBtn" onclick="saveOther()">Save</button>
-    </div>
-  </div>
-</div>
-
-<!-- SETTINGS -->
-<div class="settings-overlay" id="settingsOverlay">
-  <div class="settings-nav">
-    <button class="settings-back" onclick="closeSettings()">← Back</button>
-    <strong style="font-size:17px">Settings</strong>
-  </div>
-  <div style="padding:14px 0 0">
-    <div class="settings-section">
-      <div class="settings-row">
-        <label>Google Sheets Sync URL</label>
-        <input type="url" id="sheetsUrl" placeholder="Paste Apps Script URL here...">
-        <p>Paste your Google Apps Script web app URL here to enable syncing.</p>
-      </div>
-    </div>
-    <button class="settings-save-btn" onclick="saveSettings()" style="margin-top:14px">Save Settings</button>
-    <div style="margin:14px;background:#fff;border-radius:14px;overflow:hidden">
-      <div class="settings-row">
-        <label>Setup instructions</label>
-        <p>1. Open your Google Sheet → Extensions → Apps Script<br>2. Paste the doPost(e) script<br>3. Deploy → New deployment → Web app → Anyone can access<br>4. Copy the URL and paste above</p>
-      </div>
-    </div>
-    <div class="settings-section">
-      <div class="settings-row">
-        <label>Backup / Transfer Data</label>
-        <p>Export copies all your data as text. Import replaces all your data with pasted text — use this to move data between browsers/devices.</p>
-        <textarea id="dataTransferBox" rows="6" style="width:100%;box-sizing:border-box;font-family:monospace;font-size:12px;border:1px solid #d0d0d8;border-radius:8px;padding:8px;margin-top:8px" placeholder="Exported data will appear here, or paste data here to import"></textarea>
-        <div style="display:flex;gap:8px;margin-top:8px">
-          <button class="settings-save-btn" style="margin:0;flex:1" onclick="exportData()">Export</button>
-          <button class="settings-save-btn" style="margin:0;flex:1;background:#ff3b30" onclick="importData()">Import (overwrites everything)</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="toast" id="toast"></div>
-
-<script>
 // ═══════════════════════════════
 //  STATIC DATA
 // ═══════════════════════════════
@@ -585,24 +207,54 @@ function getBillFields(bill) {
 //  PERSISTENCE
 // ═══════════════════════════════
 function loadData() {
-  const raw = localStorage.getItem('household-expenses-v1');
-  if (raw) {
-    data = JSON.parse(raw);
-  } else {
+  data = CloudStore.loadCached();
+  if (!data) {
     data = { payments:{}, otherExpenses:[], billOverrides:{}, customBills:{}, customTabs:[], settings:{} };
     Object.entries(SEED_PAYMENTS).forEach(([id, list]) => {
       data.payments[id] = list.map((p,i) => ({...p, id: id+'_'+i}));
     });
     data.otherExpenses = SEED_OTHER.map((e,i) => ({...e, id:'o'+i}));
-    saveData();
+    // Not saved here on purpose: CloudStore.start() uploads it only if the cloud is empty.
   }
 }
-function saveData() { localStorage.setItem('household-expenses-v1', JSON.stringify(data)); }
+function saveData() { CloudStore.save(data); }
+
+// The cloud copy replaced the local one (newer copy on another device, a conflict, or a restore).
+function replaceData(fresh, reason) {
+  data = fresh;
+  if (!allTabs().some(t => t.id === activeTab)) activeTab = allTabs()[0].id;
+  renderTabs(); renderContent();
+  if (reason === 'conflict') showToast('Another device changed the data. Your last change was not saved. Please redo it.');
+  else if (reason === 'refresh') showToast('Updated from your other device');
+}
+
+const CLOUD_BANNER_TEXT = {
+  unsaved: 'Not saved to cloud yet. Will retry.',
+  offline: "Can't reach the cloud. Showing your last saved copy.",
+  disconnected: 'Signed out. Reload to sign in again.',
+};
+function updateCloudBanner(status) {
+  const banner = document.getElementById('cloudBanner');
+  banner.className = 'cloud-banner' + (status === 'saved' ? '' : ' ' + status);
+  document.getElementById('cloudBannerText').textContent = CLOUD_BANNER_TEXT[status] || '';
+  document.getElementById('cloudBannerReload').style.display = status === 'disconnected' ? '' : 'none';
+}
 
 // ═══════════════════════════════
 //  RENDER
 // ═══════════════════════════════
-function init() { loadData(); renderTabs(); renderContent(); }
+async function init() {
+  loadData(); renderTabs(); renderContent();
+  CloudStore.onReplace(replaceData);
+  CloudStore.onStatus(updateCloudBanner);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') CloudStore.refresh(); else CloudStore.flush();
+  });
+  window.addEventListener('online', () => CloudStore.refresh());
+  window.addEventListener('focus', () => CloudStore.refresh());
+  window.addEventListener('pagehide', () => CloudStore.flush());
+  await CloudStore.start(data);
+}
 
 function renderTabs() {
   const tabs = allTabs();
@@ -1603,8 +1255,56 @@ function deleteOther(id) {
 // ═══════════════════════════════
 function openSettings() {
   document.getElementById('sheetsUrl').value = (data.settings||{}).sheetsUrl||'';
+  document.getElementById('cloudSavedAt').textContent = 'Last saved to cloud: ' + fmtCloudTime(CloudStore.meta().savedAt);
+  document.getElementById('versionsList').innerHTML = '';
   document.getElementById('settingsOverlay').classList.add('open');
 }
+
+function fmtCloudTime(iso) {
+  if (!iso) return 'never';
+  const d = new Date(iso);
+  return isNaN(d) ? 'never' : d.toLocaleString();
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
+
+async function showVersions() {
+  const list = document.getElementById('versionsList');
+  list.innerHTML = '<p>Loading...</p>';
+  let snaps;
+  try {
+    snaps = await CloudStore.listSnapshots();
+  } catch (e) {
+    list.innerHTML = '<p>Could not load versions. Check your connection.</p>';
+    return;
+  }
+  if (!snaps.length) { list.innerHTML = '<p>No previous versions yet.</p>'; return; }
+  list.innerHTML = snaps.map(s =>
+    `<div class="version-row">
+      <div><strong>Version ${s.version}</strong> · ${escapeHtml(fmtCloudTime(s.createdAt))}<span>${escapeHtml(s.updatedBy)}</span></div>
+      <button onclick="restoreVersion(${s.id}, ${s.version})">Restore</button>
+    </div>`).join('');
+}
+
+async function restoreVersion(id, version) {
+  if (!confirm('Restore version ' + version + '? Your current data is kept as a new version, so this can be undone.')) return;
+  try {
+    await CloudStore.restoreSnapshot(id);
+  } catch (e) {
+    showToast('Restore failed. Check your connection.');
+    return;
+  }
+  closeSettings();
+  showToast('Restored version ' + version + '.');
+}
+
+async function signOut() {
+  try { await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' }); } catch (e) { /* the cookie may already be gone */ }
+  location.replace('/login');
+}
+
 function closeSettings() { document.getElementById('settingsOverlay').classList.remove('open'); }
 function saveSettings() {
   (data.settings=data.settings||{}).sheetsUrl = document.getElementById('sheetsUrl').value.trim();
@@ -1699,6 +1399,3 @@ function showToast(msg) {
 }
 
 init();
-</script>
-</body>
-</html>

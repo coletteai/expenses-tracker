@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Expenses</title>
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Expenses">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="header">
+  <h1>Expenses</h1>
+  <div class="header-right">
+    <button class="header-sync-btn" onclick="syncToSheets()">☁️ Sync</button>
+    <button class="header-gear" onclick="openSettings()">⚙️</button>
+  </div>
+</div>
+<div class="cloud-banner" id="cloudBanner">
+  <span id="cloudBannerText"></span>
+  <button id="cloudBannerReload" onclick="location.reload()">Reload</button>
+</div>
+
+<div class="tab-bar-wrap">
+  <div class="tab-bar" id="tabBar"></div>
+  <button class="add-tab-btn" onclick="openAddTab()" title="Add or delete tabs">＋</button>
+</div>
+<div id="tabHoverMenu" class="tab-hover-menu"></div>
+<div class="content" id="content"></div>
+
+
+<!-- ADD BILL MODAL -->
+<div class="overlay" id="addBillModal">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Add New Bill</div>
+    <div class="sheet-subtitle" id="addBillTabLabel"></div>
+    <div class="form-section">
+      <div class="form-row"><div class="form-label">Bill Name</div><input class="form-input" id="nb_name" placeholder="Bill name"></div>
+      <div class="form-row"><div class="form-label">Account #</div><input class="form-input" id="nb_acct" placeholder="Optional"></div>
+      <div class="form-row"><div class="form-label">Name on Account</div><input class="form-input" id="nb_acctName" placeholder="Optional"></div>
+      <div class="form-row"><div class="form-label">Telephone</div><input class="form-input" id="nb_phone" placeholder="Optional" type="tel"></div>
+      <div class="form-row">
+        <div class="form-label">Frequency</div>
+        <select class="form-select" id="nb_freq">
+          <option value="Monthly">Monthly</option>
+          <option value="Annual">Annual</option>
+          <option value="Quarterly">Quarterly (Every 3 Months)</option>
+          <option value="Bimonthly">Every 2 Months</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn-cancel" onclick="document.getElementById('addBillModal').classList.remove('open')">Cancel</button>
+      <button class="btn-save" id="addBillSaveBtn" onclick="saveNewBill()">Add Bill</button>
+    </div>
+  </div>
+</div>
+
+<!-- MANAGE TABS MODAL -->
+<div class="overlay" id="addTabModal">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Manage Tabs</div>
+    <div class="sheet-subtitle">Tap ✕ to delete a tab</div>
+    <div class="form-section" id="tabManageList" style="margin:8px 14px"></div>
+    <div class="sheet-subtitle" style="padding-top:14px;font-weight:700;color:#3a3a3c">Add New Tab</div>
+    <div class="form-section">
+      <div class="form-row"><div class="form-label">Tab Name</div><input class="form-input" id="nt_name" placeholder="e.g. Medical"></div>
+      <div class="form-row">
+        <div class="form-label">Color</div>
+        <input type="color" id="nt_color" value="#007aff" style="flex:1;height:32px;border:none;background:none;cursor:pointer">
+      </div>
+      <div class="form-row">
+        <div class="form-label">Type</div>
+        <select class="form-select" id="nt_kind">
+          <option value="recurring">Recurring</option>
+          <option value="non-recurring">Non-recurring</option>
+        </select>
+      </div>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn-cancel" onclick="document.getElementById('addTabModal').classList.remove('open')">Cancel</button>
+      <button class="btn-save" style="background:#007aff" onclick="saveNewTab()">Add Tab</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD OTHER EXPENSE / PERSONAL CARE MODAL -->
+<div class="overlay" id="otherModal">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="otherModalTitle">Add Expense</div>
+    <div class="sheet-subtitle" id="otherSubtitle"></div>
+    <div class="form-section">
+      <div class="form-row"><div class="form-label">Date</div><input type="date" class="form-input" id="otherDate"></div>
+      <div class="form-row" id="otherTypeRow"><div class="form-label">Type of Service</div><input class="form-input" id="otherType" placeholder="e.g. Color, Lashes, Mani..."></div>
+      <div class="form-row" id="otherProviderRow">
+        <div class="form-label" id="otherProviderLabel">Provider / Name</div>
+        <input class="form-input" id="otherProvider" placeholder="Name">
+        <select class="form-select" id="otherProviderSelect" style="display:none"></select>
+      </div>
+      <div class="form-row"><div class="form-label">Amount ($)</div><input type="number" class="form-input" id="otherAmount" placeholder="0.00" step="0.01" inputmode="decimal"></div>
+      <div class="form-row" id="otherTipRow"><div class="form-label">Tip ($)</div><input type="number" class="form-input" id="otherTip" placeholder="0.00" step="0.01" inputmode="decimal"></div>
+      <div class="form-row" id="otherNotesRow"><div class="form-label">Notes</div><input class="form-input" id="otherNotes" placeholder="Optional"></div>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn-cancel" onclick="closeOtherModal()">Cancel</button>
+      <button class="btn-save" id="otherSaveBtn" onclick="saveOther()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div class="settings-overlay" id="settingsOverlay">
+  <div class="settings-nav">
+    <button class="settings-back" onclick="closeSettings()">← Back</button>
+    <strong style="font-size:17px">Settings</strong>
+  </div>
+  <div style="padding:14px 0 0">
+    <div class="settings-section">
+      <div class="settings-row">
+        <label>Cloud</label>
+        <p id="cloudSavedAt">Last saved to cloud: never</p>
+        <button class="settings-save-btn" style="margin:10px 0 0;width:100%" onclick="showVersions()">Previous versions</button>
+        <div id="versionsList"></div>
+        <button class="settings-save-btn" style="margin:10px 0 0;width:100%;background:#8e8e93" onclick="signOut()">Sign out on this device</button>
+      </div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-row">
+        <label>Google Sheets Sync URL</label>
+        <input type="url" id="sheetsUrl" placeholder="Paste Apps Script URL here...">
+        <p>Paste your Google Apps Script web app URL here to enable syncing.</p>
+      </div>
+    </div>
+    <button class="settings-save-btn" onclick="saveSettings()" style="margin-top:14px">Save Settings</button>
+    <div style="margin:14px;background:#fff;border-radius:14px;overflow:hidden">
+      <div class="settings-row">
+        <label>Setup instructions</label>
+        <p>1. Open your Google Sheet → Extensions → Apps Script<br>2. Paste the doPost(e) script<br>3. Deploy → New deployment → Web app → Anyone can access<br>4. Copy the URL and paste above</p>
+      </div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-row">
+        <label>Backup / Transfer Data</label>
+        <p>Export copies all your data as text. Import replaces all your data with pasted text — use this to move data between browsers/devices.</p>
+        <textarea id="dataTransferBox" rows="6" style="width:100%;box-sizing:border-box;font-family:monospace;font-size:12px;border:1px solid #d0d0d8;border-radius:8px;padding:8px;margin-top:8px" placeholder="Exported data will appear here, or paste data here to import"></textarea>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="settings-save-btn" style="margin:0;flex:1" onclick="exportData()">Export</button>
+          <button class="settings-save-btn" style="margin:0;flex:1;background:#ff3b30" onclick="importData()">Import (overwrites everything)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="storage.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1299,6 +1299,12 @@ async function restoreVersion(id, version) {
   closeSettings();
   showToast('Restored version ' + version + '.');
 }
+
+async function signOut() {
+  try { await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' }); } catch (e) { /* the cookie may already be gone */ }
+  location.replace('/login');
+}
+
 function closeSettings() { document.getElementById('settingsOverlay').classList.remove('open'); }
 function saveSettings() {
   (data.settings=data.settings||{}).sheetsUrl = document.getElementById('sheetsUrl').value.trim();

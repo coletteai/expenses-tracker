@@ -1,26 +1,20 @@
-// Runs the Worker with no DEV_EMAIL binding: every API call must be refused,
-// and an Access identity supplied by the runtime must be used when present.
+// Runs the Worker with no DEV_EMAIL binding: every API call must be refused.
+// DEV_EMAIL must also be ignored outside localhost/127.0.0.1, even when it is set.
 import { env } from 'cloudflare:test';
 import { describe, it, expect } from 'vitest';
 import worker from '../src/worker.js';
 
 describe('identity', () => {
-  it('returns 401 when neither Access nor DEV_EMAIL provides an email', async () => {
+  it('returns 401 when there is no cookie and no DEV_EMAIL', async () => {
     const envWithoutEmail = Object.assign({}, env, { DEV_EMAIL: undefined });
-    const res = await worker.fetch(new Request('https://example.com/api/doc'), envWithoutEmail, {});
+    const res = await worker.fetch(new Request('http://localhost/api/doc'), envWithoutEmail, {});
     expect(res.status).toBe(401);
     expect(await res.json()).toEqual({ error: 'unauthenticated' });
   });
 
-  it('uses the Access identity when the runtime provides one', async () => {
-    const ctx = { access: { getIdentity: async () => ({ email: 'mom@example.com' }) } };
-    const envWithoutEmail = Object.assign({}, env, { DEV_EMAIL: undefined });
-    const res = await worker.fetch(new Request('https://example.com/api/doc', {
-      method: 'PUT', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ baseVersion: null, data: { a: 1 } }),
-    }), envWithoutEmail, ctx);
-    expect(res.status).toBe(200);
-    const row = await env.DB.prepare('SELECT updated_by FROM document WHERE id = 1').first('updated_by');
-    expect(row).toBe('mom@example.com');
+  it('ignores DEV_EMAIL on a non-local hostname', async () => {
+    const res = await worker.fetch(new Request('https://household.example/api/doc'), env, {});
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: 'unauthenticated' });
   });
 });

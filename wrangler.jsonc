@@ -1,18 +1,19 @@
 {
   "name": "household-expenses",
+  "account_id": "b21fea6b4e5cff354d5d7e5e48273838",
   "main": "src/worker.js",
   "compatibility_date": "2026-08-22",
   "workers_dev": true,
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",
-    "run_worker_first": ["/api/*"]
+    "run_worker_first": true
   },
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "household-expenses",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "3a21e1ef-fbc9-4ee6-99f8-c0e93b8b213f",
       "migrations_dir": "migrations"
     }
   ],

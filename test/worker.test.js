@@ -1,7 +1,7 @@
 import { env, SELF } from 'cloudflare:test';
 import { describe, it, expect, beforeEach } from 'vitest';
 
-const BASE = 'https://example.com';
+const BASE = 'http://localhost';
 
 // The pool does not isolate storage between tests in this version, so clear the tables explicitly.
 beforeEach(async () => {

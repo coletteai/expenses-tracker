@@ -154,15 +154,14 @@ Write order: the update (or the first insert, done with `INSERT OR IGNORE`) runs
 
 ## 8. Authentication and identity
 
-- Cloudflare Access is enabled on the Worker itself, for all hostnames, so the static app and the API are protected together on the workers.dev address. No custom domain is needed.
-- Policy: Allow, including a list of specific emails: the mother, the UI maintainer, and the operator.
-- Login method: one-time PIN by email only. Session duration: the longest option Cloudflare offers.
-- The browser sends the Access cookie automatically because the API is same-origin. The app has no login UI and no token handling.
-- The Worker resolves the identity email in this order:
-  1. `ctx.access.getIdentity()`, available when Access is bound to the Worker.
-  2. `env.DEV_EMAIL`, set only in a local `.dev.vars` file for `wrangler dev` and in test bindings. It is never set in production.
-  3. Otherwise respond 401 `{ "error": "unauthenticated" }`.
-- Adding a family member means adding one email to the policy. Removing access means removing it.
+Revised on 2026-09-22. Cloudflare Access was the original choice, but its free plan requires a payment method on file, which the operator declined. The app therefore carries its own sign-in, kept as small as the household needs.
+
+- A shared household passphrase and a random signing key live as Worker secrets (`HOUSEHOLD_PASSPHRASE`, `SESSION_SECRET`), set once with `wrangler secret put` and never stored in code.
+- `public/login.html` asks for a first name and the passphrase. `POST /api/login` compares the passphrase in constant time and, on success, sets a signed, HttpOnly, Secure, SameSite=Lax cookie that lasts one year. The cookie carries the name and an expiry, signed with HMAC-SHA256. A wrong passphrase is answered after a one-second delay with a generic error.
+- The Worker runs first for every path. Without a valid cookie, page requests redirect to `/login`, and `/api/*` answers 401. `/login.html`, `/manifest.json`, and `/icons/*` are public.
+- The identity recorded in `updated_by` is the name typed at sign-in. `DEV_EMAIL` remains the local development and test identity and is honored only for `localhost` and `127.0.0.1`.
+- `POST /api/logout` clears the cookie; Settings offers "Sign out on this device". Changing the passphrase does not sign devices out; rotating `SESSION_SECRET` does.
+- Adding a person means sharing the passphrase; removing one means changing it.
 
 ## 9. Frontend: the storage adapter
 

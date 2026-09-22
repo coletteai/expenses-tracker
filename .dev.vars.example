@@ -1,3 +1,8 @@
 # Copy to .dev.vars for local development. Never commit .dev.vars.
-# The email the Worker treats as signed in when Cloudflare Access is not in front of it.
+# The email the Worker treats as signed in, for localhost and 127.0.0.1 only.
 DEV_EMAIL=you@example.com
+
+# With DEV_EMAIL set above, the local app skips sign-in entirely.
+# To try the login page locally instead, comment DEV_EMAIL out and set:
+# SESSION_SECRET=local-dev-secret
+# HOUSEHOLD_PASSPHRASE=local passphrase

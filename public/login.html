@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Expenses</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f2f2f7;
+    min-height: 100vh;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .card {
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    width: 100%;
+    max-width: 360px;
+    padding: 28px 24px;
+  }
+  h1 {
+    margin: 0 0 6px;
+    font-size: 22px;
+    color: #1c1c1e;
+  }
+  .subtitle {
+    margin: 0 0 24px;
+    font-size: 14px;
+    color: #8e8e93;
+  }
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #3a3a3c;
+    margin-bottom: 6px;
+  }
+  .field {
+    margin-bottom: 16px;
+  }
+  input {
+    width: 100%;
+    font-size: 16px;
+    padding: 12px 14px;
+    border: 1px solid #d0d0d8;
+    border-radius: 10px;
+    background: #f9f9fb;
+    color: #1c1c1e;
+  }
+  input:focus {
+    outline: none;
+    border-color: #007aff;
+  }
+  button {
+    width: 100%;
+    padding: 14px;
+    margin-top: 4px;
+    background: #007aff;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+  }
+  button:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+  .message {
+    min-height: 18px;
+    margin-top: 14px;
+    font-size: 13px;
+    color: #ff3b30;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<form class="card" id="loginForm">
+  <h1>Expenses</h1>
+  <p class="subtitle">Sign in once on this device.</p>
+  <div class="field">
+    <label for="name">Your name</label>
+    <input type="text" id="name" autocomplete="name" required>
+  </div>
+  <div class="field">
+    <label for="passphrase">Passphrase</label>
+    <input type="password" id="passphrase" autocomplete="current-password" required>
+  </div>
+  <button type="submit" id="submitBtn">Sign in</button>
+  <p class="message" id="message"></p>
+</form>
+
+<script>
+  var NAME_KEY = 'household-expenses.name';
+  var nameEl = document.getElementById('name');
+  var passphraseEl = document.getElementById('passphrase');
+  var submitBtn = document.getElementById('submitBtn');
+  var messageEl = document.getElementById('message');
+
+  try {
+    var savedName = localStorage.getItem(NAME_KEY);
+    if (savedName) nameEl.value = savedName;
+  } catch (e) { /* localStorage unavailable, nothing to prefill */ }
+
+  document.getElementById('loginForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    messageEl.textContent = '';
+    submitBtn.disabled = true;
+
+    fetch('/api/login', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: nameEl.value, passphrase: passphraseEl.value }),
+    }).then(function (res) {
+      if (res.status === 200) {
+        return res.json().then(function (body) {
+          try { localStorage.setItem(NAME_KEY, body.name); } catch (e) { /* nothing to save to */ }
+          location.replace('/');
+        });
+      }
+      if (res.status === 401) {
+        messageEl.textContent = 'That passphrase is not right. Try again.';
+      } else if (res.status === 503) {
+        messageEl.textContent = 'The app is not set up yet. Ask whoever runs it to set the passphrase.';
+      } else {
+        messageEl.textContent = 'Could not sign in. Check your connection.';
+      }
+      submitBtn.disabled = false;
+    }).catch(function () {
+      messageEl.textContent = 'Could not sign in. Check your connection.';
+      submitBtn.disabled = false;
+    });
+  });
+</script>
+</body>
+</html>

@@ -6,6 +6,8 @@ Guidance for anyone (or any Claude session) working on this repository. Read thi
 
 A household expenses tracker used by one family. It is live at `https://household-expenses.coletteai17.workers.dev`, running on a Cloudflare Worker with a D1 (SQLite) database, all on the free plan. Sign-in is a shared household passphrase; each device signs in once and stays signed in for a year.
 
+Source is at `https://github.com/coletteai/expenses-tracker`. Pushing to `main` deploys automatically (see Deploying below).
+
 Nothing here has a build step. The app is plain HTML, CSS, and classic JavaScript files. Do not add a framework, a bundler, TypeScript, or npm runtime dependencies.
 
 ## Where things live
@@ -52,21 +54,19 @@ If you change `src/worker.js` or `public/storage.js`, add or update a test in th
 
 ## Deploying
 
-Deploys need a Cloudflare API token for the account that owns the Worker (the account whose subdomain is `coletteai17`). Create one in the Cloudflare dashboard under My Profile, API Tokens, template "Edit Cloudflare Workers", plus the permission Account, D1, Edit. Put it in a file named `.env` at the repository root, one line, never in chat and never committed:
+Pushing to `main` on GitHub deploys automatically. Cloudflare Workers Builds is connected to `coletteai/expenses-tracker`: it builds with `npm ci` and deploys with `npm run deploy` (applies any new migration, then publishes). Build status shows as a check on the GitHub commit, and in the Cloudflare dashboard under the Worker's Builds tab.
 
-```
-CLOUDFLARE_API_TOKEN=the-token
-```
+Do not push to `main` with failing tests, and do not push a schema change without a new migration file in `migrations/`.
 
-Then, with tests green:
+To deploy manually from a local machine instead (rarely needed, e.g. to test a deploy before pushing): with tests green, run
 
 ```bash
 npm run deploy    # applies any new migration to production, then publishes
 ```
 
-The new version is live within seconds at the URL above. Cloudflare keeps previous versions; `npx wrangler rollback` returns to the last one if something is wrong.
+This uses the Cloudflare credentials from `npx wrangler login` on that machine; no API token file is needed for a logged-in local deploy.
 
-Do not deploy with failing tests, and do not deploy a schema change without a new migration file in `migrations/`.
+The new version is live within seconds at the URL above. Cloudflare keeps previous versions; `npx wrangler rollback` returns to the last one if something is wrong.
 
 ## Sign-in and secrets
 

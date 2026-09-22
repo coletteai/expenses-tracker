@@ -35,9 +35,16 @@ function cookiePair(res) {
   return setCookie ? setCookie.split(';')[0] : null;
 }
 
-function tamperLastChar(s) {
-  const last = s.slice(-1);
-  return s.slice(0, -1) + (last === 'a' ? 'b' : 'a');
+// Flips a character in the middle of the signature (not the last character:
+// the signature's last base64url character only carries 2 unused bits, so
+// swapping it for 'a' can decode to the same bytes and leave the token valid).
+function tamperSignature(token) {
+  const dot = token.lastIndexOf('.');
+  const payload = token.slice(0, dot + 1);
+  const signature = token.slice(dot + 1);
+  const replacement = signature[10] === 'a' ? 'b' : 'a';
+  const tampered = signature.slice(0, 10) + replacement + signature.slice(11);
+  return payload + tampered;
 }
 
 describe('unauthenticated routing', () => {
@@ -157,7 +164,7 @@ describe('session tampering', () => {
   it('rejects a cookie with a tampered signature', async () => {
     const res = await login('Mom', 'correct horse battery');
     const token = cookiePair(res).slice('session='.length);
-    const tampered = 'session=' + tamperLastChar(token);
+    const tampered = 'session=' + tamperSignature(token);
     const doc = await fetchWorker('/api/doc', { headers: { Cookie: tampered } });
     expect(doc.status).toBe(401);
   });

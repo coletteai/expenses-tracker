@@ -20,9 +20,9 @@ Pushing to the `main` branch deploys automatically once Workers Builds is connec
 ## Setup (operator, once)
 
 1. Install and sign in: `npm install`, then `npx wrangler login`.
-2. Create the database: `npx wrangler d1 create household-expenses`. Copy the `database_id` from the output into `wrangler.jsonc`, replacing the zeros.
+2. Create the database: `npx wrangler d1 create household-expenses`. In `wrangler.jsonc`, replace the existing `database_id` with the one from that output, and replace `account_id` with the id shown on your Cloudflare dashboard account overview page.
 3. Deploy: `npm run deploy`. This applies the migration to the remote database and publishes the Worker at `https://household-expenses.<your-subdomain>.workers.dev`.
-4. Set the two secrets: `openssl rand -base64 32 | npx wrangler secret put SESSION_SECRET` and `npx wrangler secret put HOUSEHOLD_PASSPHRASE` (type a sentence-length passphrase when prompted).
+4. Set the two secrets: `openssl rand -base64 32 | npx wrangler secret put SESSION_SECRET` and `npx wrangler secret put HOUSEHOLD_PASSPHRASE` (its length is what protects the app, so type a full sentence when prompted, not a single word).
 5. Open the URL on each device, type a first name and the passphrase once. Add it to the home screen on the phone.
 6. Optional, automatic deploys: in the Worker's Settings open Builds and connect this GitHub repository. Build command `npm ci`, deploy command `npm run deploy`, branch `main`. If the build cannot apply migrations because of permissions, run `npm run migrate` from your machine after schema changes and set the deploy command to `npx wrangler deploy`.
 

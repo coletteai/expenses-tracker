@@ -47,13 +47,32 @@
       <div class="form-row"><div class="form-label">Telephone</div><input class="form-input" id="nb_phone" placeholder="Optional" type="tel"></div>
       <div class="form-row">
         <div class="form-label">Frequency</div>
-        <select class="form-select" id="nb_freq">
+        <select class="form-select" id="nb_freq" onchange="updateAddBillFreqVisibility()">
           <option value="Monthly">Monthly</option>
           <option value="Annual">Annual</option>
           <option value="Quarterly">Quarterly (Every 3 Months)</option>
           <option value="Bimonthly">Every 2 Months</option>
           <option value="Other">Other</option>
         </select>
+      </div>
+      <div class="form-row" id="nb_stmtDayRow">
+        <div class="form-label">Statement date (day of month)</div>
+        <input type="number" class="form-input" id="nb_stmtDay" min="1" max="31" placeholder="Optional">
+      </div>
+      <div class="form-row" id="nb_payDayRow">
+        <div class="form-label">Payment date (day of month)</div>
+        <input type="number" class="form-input" id="nb_payDay" min="1" max="31" placeholder="Optional">
+      </div>
+      <div class="form-row">
+        <div class="form-label">Amount</div>
+        <select class="form-select" id="nb_amountMode" onchange="updateAddBillAmountVisibility()">
+          <option value="manual">Manual</option>
+          <option value="auto">Auto (same amount)</option>
+        </select>
+      </div>
+      <div class="form-row" id="nb_amountRow" style="display:none">
+        <div class="form-label">Amount ($)</div>
+        <input type="number" class="form-input" id="nb_amount" step="0.01" placeholder="0.00">
       </div>
     </div>
     <div class="sheet-actions">

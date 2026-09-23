@@ -330,9 +330,10 @@ function renderContent() {
     const cols = tabColumns(tab);
     html += `<div class="section-label">${tab.label} Log${filterSuffix}</div>`;
     html += `<div style="background:#fff;border-radius:16px;box-shadow:0 1px 4px rgba(0,0,0,0.08);overflow:hidden;margin-bottom:14px">`;
+    html += `<div class="payments-scroll">`;
     let headerCells = `<div class="payment-cell payments-header-cell col-stmt">Date</div>`;
-    if (cols.includes('type'))     headerCells += `<div class="payment-cell payments-header-cell" style="flex:1.2">Type of Service</div>`;
-    if (cols.includes('provider')) headerCells += `<div class="payment-cell payments-header-cell" style="flex:1">Provider</div>`;
+    if (cols.includes('type'))     headerCells += `<div class="payment-cell payments-header-cell col-type">Type of Service</div>`;
+    if (cols.includes('provider')) headerCells += `<div class="payment-cell payments-header-cell col-provider">Provider</div>`;
     headerCells += `<div class="payment-cell payments-header-cell col-amt">Amount</div>`;
     if (cols.includes('tip'))      headerCells += `<div class="payment-cell payments-header-cell col-amt">Tip</div>`;
     if (cols.includes('notes'))    headerCells += `<div class="payment-cell payments-header-cell col-notes">Notes</div>`;
@@ -349,8 +350,8 @@ function renderContent() {
           html += buildEditOtherRow(tab, e);
         } else {
           let rowCells = `<div class="payment-cell col-stmt">${fmtDate(e.date)}</div>`;
-          if (cols.includes('type'))     rowCells += `<div class="payment-cell" style="flex:1.2">${e.type||'—'}</div>`;
-          if (cols.includes('provider')) rowCells += `<div class="payment-cell muted" style="flex:1">${e.provider||'—'}</div>`;
+          if (cols.includes('type'))     rowCells += `<div class="payment-cell col-type">${e.type||'—'}</div>`;
+          if (cols.includes('provider')) rowCells += `<div class="payment-cell muted col-provider">${e.provider||'—'}</div>`;
           rowCells += `<div class="payment-cell amount col-amt">${e.amount>0?'$'+(+e.amount).toFixed(2):'—'}</div>`;
           if (cols.includes('tip'))      rowCells += `<div class="payment-cell muted col-amt">${(+e.tip||0)>0?'$'+(+e.tip).toFixed(2):'—'}</div>`;
           if (cols.includes('notes'))    rowCells += `<div class="payment-cell muted col-notes">${e.notes||'—'}</div>`;
@@ -365,6 +366,7 @@ function renderContent() {
     } else if (!addingOtherRow) {
       html += `<div class="no-payments">No services logged yet.</div>`;
     }
+    html += `</div>`;
     html += `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid #f0f0f5">
       <span style="font-size:13px;color:#8e8e93">This month total: <strong style="color:#1c1c1e">$${monthTotal.toFixed(2)}</strong></span>
       <button class="log-pay-btn" style="background:${tab.color}" onclick="openAddOtherRow()">+ Log Service</button>
@@ -444,7 +446,8 @@ function buildBillCard(bill, color, ym) {
 
   // Bill info — a free-form, per-bill list of named fields (Account #, Telephone, Access #, etc.)
   // Always read-only here; editing happens in the single "Edit Bill" panel below.
-  const infoHtml = buildReadOnlyFieldsHtml(bill);
+  const avgAmount = payments.length ? payments.reduce((s,p)=>s+(+p.amount||0), 0) / payments.length : null;
+  const infoHtml = buildReadOnlyFieldsHtml(bill, avgAmount);
 
   // Payments
   const showAll = showAllHistory[bill.id];
@@ -512,22 +515,28 @@ function buildBillCard(bill, color, ym) {
     ${inEditMode ? buildUnifiedEditPanel(bill) : ''}
     ${infoHtml}
     <div class="payments-section">
-      ${paymentsHtml}
+      <div class="payments-scroll">${paymentsHtml}</div>
       ${toggleBtn}
     </div>
   </div>`;
 }
 
-function buildReadOnlyFieldsHtml(bill) {
+function buildReadOnlyFieldsHtml(bill, avgAmount) {
   const fields = getBillFields(bill);
-  if (fields.length === 0) return `<div class="bill-info-row"><span class="bill-info-value empty">No account info yet — tap Edit to add Account #, Telephone, etc.</span></div>`;
+  const hintHtml = fields.length === 0
+    ? `<span class="bill-info-value empty">No account info yet — tap Edit to add Account #, Telephone, etc.</span>`
+    : '';
   const itemsHtml = fields.map(f =>
     `<div class="bill-info-item">
       <span class="bill-info-label">${f.label}:</span>
       <span class="bill-info-value">${f.value||'—'}</span>
     </div>`
   ).join('');
-  return `<div class="bill-info-row">${itemsHtml}</div>`;
+  const avgHtml = `<div class="bill-info-item">
+    <span class="bill-info-label">Average:</span>
+    <span class="bill-info-value">${avgAmount!=null ? '$'+avgAmount.toFixed(2) : '—'}</span>
+  </div>`;
+  return `<div class="bill-info-row">${hintHtml}${itemsHtml}${avgHtml}</div>`;
 }
 
 function buildEditableFieldsHtml(bill) {
@@ -585,8 +594,8 @@ function methodSelectHtml(id, methods, selectedValue) {
 function buildInlinePaymentRow(bill) {
   return `<div class="payment-row payment-row-editing">
     ${dateFieldHtml(`newPayStmt_${bill.id}`, 'col-stmt', autoStmtDate(bill))}
-    ${dateFieldHtml(`newPayDate_${bill.id}`, 'col-pay', '')}
-    <input type="number" class="col-amt inline-input" id="newPayAmount_${bill.id}" placeholder="0.00" step="0.01" inputmode="decimal">
+    ${dateFieldHtml(`newPayDate_${bill.id}`, 'col-pay', autoPayDate(bill))}
+    <input type="number" class="col-amt inline-input" id="newPayAmount_${bill.id}" placeholder="0.00" step="0.01" inputmode="decimal" value="${bill.typical!=null?bill.typical:''}">
     ${methodSelectHtml(`newPayMethod_${bill.id}`, bill.methods, '')}
     <input type="text" class="col-notes inline-input" id="newPayNotes_${bill.id}" placeholder="Notes">
     <div class="col-actions">
@@ -687,7 +696,8 @@ function buildUnifiedEditPanel(bill) {
   }).join('');
   const showDate1 = currentType==='Annual' || currentType==='Semi-Annual';
   const showDate2 = currentType==='Semi-Annual';
-  const stmtMode = bill.stmtDateMode === 'auto' ? 'auto' : 'manual';
+  const showMonthlyDates = currentType==='Monthly';
+  const amountMode = bill.typical!=null ? 'auto' : 'manual';
 
   const methodRowsHtml = editingMethods.map((m, i) => `
     <div class="method-row">
@@ -721,16 +731,25 @@ function buildUnifiedEditPanel(bill) {
       <input type="date" class="edit-panel-input" id="edit_freqDate2_${bill.id}" value="${dueDates[1]?('2000-'+dueDates[1]):''}">
     </div>
 
+    <div class="edit-panel-row" id="edit_stmtDayRow_${bill.id}" style="display:${showMonthlyDates?'flex':'none'}">
+      <label for="edit_stmtDay_${bill.id}">Statement date (day of month)</label>
+      <input type="number" class="edit-panel-input" id="edit_stmtDay_${bill.id}" min="1" max="31" placeholder="Optional" value="${bill.stmtDateDay||''}">
+    </div>
+    <div class="edit-panel-row" id="edit_payDayRow_${bill.id}" style="display:${showMonthlyDates?'flex':'none'}">
+      <label for="edit_payDay_${bill.id}">Payment date (day of month)</label>
+      <input type="number" class="edit-panel-input" id="edit_payDay_${bill.id}" min="1" max="31" placeholder="Optional" value="${bill.payDateDay||''}">
+    </div>
+
     <div class="edit-panel-row">
-      <label for="edit_stmtMode_${bill.id}">Statement Date</label>
-      <select class="edit-panel-input" id="edit_stmtMode_${bill.id}" onchange="updateEditPanelStmtVisibility('${bill.id}')">
-        <option value="manual" ${stmtMode==='manual'?'selected':''}>Manual</option>
-        <option value="auto" ${stmtMode==='auto'?'selected':''}>Auto (same day each month)</option>
+      <label for="edit_amountMode_${bill.id}">Amount</label>
+      <select class="edit-panel-input" id="edit_amountMode_${bill.id}" onchange="updateEditPanelAmountVisibility('${bill.id}')">
+        <option value="manual" ${amountMode==='manual'?'selected':''}>Manual</option>
+        <option value="auto" ${amountMode==='auto'?'selected':''}>Auto (same amount)</option>
       </select>
     </div>
-    <div class="edit-panel-row" id="edit_stmtDayRow_${bill.id}" style="display:${stmtMode==='auto'?'flex':'none'}">
-      <label for="edit_stmtDay_${bill.id}">Day of month</label>
-      <input type="number" class="edit-panel-input" id="edit_stmtDay_${bill.id}" min="1" max="31" value="${bill.stmtDateDay||''}">
+    <div class="edit-panel-row" id="edit_amountRow_${bill.id}" style="display:${amountMode==='auto'?'flex':'none'}">
+      <label for="edit_amount_${bill.id}">Amount ($)</label>
+      <input type="number" class="edit-panel-input" id="edit_amount_${bill.id}" step="0.01" value="${bill.typical!=null?bill.typical:''}">
     </div>
 
     <div class="edit-panel-section-label">Payment Methods</div>
@@ -761,11 +780,13 @@ function updateEditPanelFreqVisibility(billId) {
   document.getElementById('edit_freqOtherRow_'+billId).style.display = type==='Other' ? 'flex' : 'none';
   document.getElementById('edit_freqDate1Row_'+billId).style.display = (type==='Annual'||type==='Semi-Annual') ? 'flex' : 'none';
   document.getElementById('edit_freqDate2Row_'+billId).style.display = type==='Semi-Annual' ? 'flex' : 'none';
+  document.getElementById('edit_stmtDayRow_'+billId).style.display = type==='Monthly' ? 'flex' : 'none';
+  document.getElementById('edit_payDayRow_'+billId).style.display = type==='Monthly' ? 'flex' : 'none';
 }
 
-function updateEditPanelStmtVisibility(billId) {
-  const mode = document.getElementById('edit_stmtMode_'+billId).value;
-  document.getElementById('edit_stmtDayRow_'+billId).style.display = mode==='auto' ? 'flex' : 'none';
+function updateEditPanelAmountVisibility(billId) {
+  const mode = document.getElementById('edit_amountMode_'+billId).value;
+  document.getElementById('edit_amountRow_'+billId).style.display = mode==='auto' ? 'flex' : 'none';
 }
 
 function syncEditMethodsFromDom(billId) {
@@ -826,14 +847,17 @@ function saveBillEditPanel(billId) {
     if (d2) dueDates.push(d2.slice(5));
   }
 
-  const stmtDateMode = document.getElementById('edit_stmtMode_'+billId).value;
-  const stmtDateDay  = stmtDateMode === 'auto' ? (+document.getElementById('edit_stmtDay_'+billId).value || null) : null;
+  const stmtDateDay = freqType === 'Monthly' ? (+document.getElementById('edit_stmtDay_'+billId).value || null) : null;
+  const payDateDay  = freqType === 'Monthly' ? (+document.getElementById('edit_payDay_'+billId).value || null) : null;
+
+  const amountMode = document.getElementById('edit_amountMode_'+billId).value;
+  const typical = amountMode === 'auto' ? (+document.getElementById('edit_amount_'+billId).value || null) : null;
 
   if (!data.billOverrides) data.billOverrides = {};
   const existing = data.billOverrides[billId] || {};
-  data.billOverrides[billId] = { ...existing, name, fields, methods, freq, dueDates, stmtDateMode, stmtDateDay };
+  data.billOverrides[billId] = { ...existing, name, fields, methods, freq, dueDates, stmtDateDay, payDateDay, typical };
 
-  if (stmtDateMode === 'auto' && stmtDateDay) {
+  if (stmtDateDay) {
     (data.payments[billId]||[]).forEach(p => {
       if (!p.stmt && p.date) p.stmt = stmtDateForMonth(p.date, stmtDateDay);
     });
@@ -929,22 +953,40 @@ function openAddBill() {
   const tab = allTabs().find(t=>t.id===activeTab);
   document.getElementById('addBillTabLabel').textContent = tab ? tab.label : '';
   document.getElementById('addBillSaveBtn').style.background = tab ? tab.color : '#007aff';
-  ['nb_name','nb_acct','nb_acctName','nb_phone'].forEach(id => document.getElementById(id).value='');
+  ['nb_name','nb_acct','nb_acctName','nb_phone','nb_stmtDay','nb_payDay','nb_amount'].forEach(id => document.getElementById(id).value='');
   document.getElementById('nb_freq').value = 'Monthly';
+  document.getElementById('nb_amountMode').value = 'manual';
+  updateAddBillFreqVisibility();
+  updateAddBillAmountVisibility();
   document.getElementById('addBillModal').classList.add('open');
+}
+
+function updateAddBillFreqVisibility() {
+  const isMonthly = document.getElementById('nb_freq').value === 'Monthly';
+  document.getElementById('nb_stmtDayRow').style.display = isMonthly ? 'flex' : 'none';
+  document.getElementById('nb_payDayRow').style.display = isMonthly ? 'flex' : 'none';
+}
+
+function updateAddBillAmountVisibility() {
+  const isAuto = document.getElementById('nb_amountMode').value === 'auto';
+  document.getElementById('nb_amountRow').style.display = isAuto ? 'flex' : 'none';
 }
 
 function saveNewBill() {
   const name = document.getElementById('nb_name').value.trim();
   if (!name) { showToast('Please enter a bill name'); return; }
   const id = 'custom_'+Date.now();
+  const freq = document.getElementById('nb_freq').value;
+  const amountMode = document.getElementById('nb_amountMode').value;
   const newBill = {
     id, name,
     acct:     document.getElementById('nb_acct').value.trim(),
     acctName: document.getElementById('nb_acctName').value.trim(),
     phone:    document.getElementById('nb_phone').value.trim(),
-    freq:     document.getElementById('nb_freq').value,
-    typical:  null,
+    freq,
+    stmtDateDay: freq === 'Monthly' ? (+document.getElementById('nb_stmtDay').value || null) : null,
+    payDateDay:  freq === 'Monthly' ? (+document.getElementById('nb_payDay').value || null) : null,
+    typical:  amountMode === 'auto' ? (+document.getElementById('nb_amount').value || null) : null,
     methods:  [],
   };
   if (!data.customBills) data.customBills = {};
@@ -1154,11 +1196,11 @@ function cancelAddOtherRow() {
 function buildInlineOtherRow(tab) {
   const cols = tabColumns(tab);
   let cells = dateFieldHtml(`newOtherDate_${tab.id}`, 'col-stmt', todayStr());
-  if (cols.includes('type')) cells += `<input type="text" class="inline-input" id="newOtherType_${tab.id}" placeholder="Type of Service" style="flex:1.2">`;
+  if (cols.includes('type')) cells += `<input type="text" class="inline-input col-type" id="newOtherType_${tab.id}" placeholder="Type of Service">`;
   if (cols.includes('provider')) {
     cells += tab.id === 'family'
-      ? `<select class="inline-input" id="newOtherProvider_${tab.id}" style="flex:1">${FAMILY_MEMBERS.map(m=>`<option value="${m}" ${m===(tabMemberFilter||'')?'selected':''}>${m}</option>`).join('')}</select>`
-      : `<input type="text" class="inline-input" id="newOtherProvider_${tab.id}" placeholder="Provider" style="flex:1">`;
+      ? `<select class="inline-input col-provider" id="newOtherProvider_${tab.id}">${FAMILY_MEMBERS.map(m=>`<option value="${m}" ${m===(tabMemberFilter||'')?'selected':''}>${m}</option>`).join('')}</select>`
+      : `<input type="text" class="inline-input col-provider" id="newOtherProvider_${tab.id}" placeholder="Provider">`;
   }
   cells += `<input type="number" class="col-amt inline-input" id="newOtherAmount_${tab.id}" placeholder="0.00" step="0.01" inputmode="decimal">`;
   if (cols.includes('tip')) cells += `<input type="number" class="col-amt inline-input" id="newOtherTip_${tab.id}" placeholder="0.00" step="0.01" inputmode="decimal">`;
@@ -1202,11 +1244,11 @@ function cancelEditOtherRow() {
 function buildEditOtherRow(tab, e) {
   const cols = tabColumns(tab);
   let cells = dateFieldHtml(`editOtherDate_${e.id}`, 'col-stmt', e.date||'');
-  if (cols.includes('type')) cells += `<input type="text" class="inline-input" id="editOtherType_${e.id}" value="${e.type||''}" style="flex:1.2">`;
+  if (cols.includes('type')) cells += `<input type="text" class="inline-input col-type" id="editOtherType_${e.id}" value="${e.type||''}">`;
   if (cols.includes('provider')) {
     cells += tab.id === 'family'
-      ? `<select class="inline-input" id="editOtherProvider_${e.id}" style="flex:1">${FAMILY_MEMBERS.map(m=>`<option value="${m}" ${m===e.provider?'selected':''}>${m}</option>`).join('')}</select>`
-      : `<input type="text" class="inline-input" id="editOtherProvider_${e.id}" value="${e.provider||''}" style="flex:1">`;
+      ? `<select class="inline-input col-provider" id="editOtherProvider_${e.id}">${FAMILY_MEMBERS.map(m=>`<option value="${m}" ${m===e.provider?'selected':''}>${m}</option>`).join('')}</select>`
+      : `<input type="text" class="inline-input col-provider" id="editOtherProvider_${e.id}" value="${e.provider||''}">`;
   }
   cells += `<input type="number" class="col-amt inline-input" id="editOtherAmount_${e.id}" value="${e.amount}" step="0.01" inputmode="decimal">`;
   if (cols.includes('tip')) cells += `<input type="number" class="col-amt inline-input" id="editOtherTip_${e.id}" value="${e.tip||''}" step="0.01" inputmode="decimal">`;
@@ -1384,8 +1426,12 @@ function stmtDateForMonth(dateStr, day) {
   return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
 }
 function autoStmtDate(bill) {
-  if (bill.stmtDateMode !== 'auto' || !bill.stmtDateDay) return '';
+  if (!bill.stmtDateDay) return '';
   return stmtDateForMonth(todayStr(), bill.stmtDateDay);
+}
+function autoPayDate(bill) {
+  if (!bill.payDateDay) return '';
+  return stmtDateForMonth(todayStr(), bill.payDateDay);
 }
 function fmtDate(d) {
   if (!d) return '—';
